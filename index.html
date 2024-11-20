@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API CRUD</title>
+    <link href="bootstrap-4.0.0-dist/css/bootstrap.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container my-5">
+        <!-- Horizontal Form -->
+         <div class="container">
+            <h1 class="message"></h1>
+         </div>
+        <form class="row gx-2 align-items-center mb-4" id="user_form">
+            <div class="col-auto">
+                <label for="name" class="visually-hidden">Name</label>
+                <input type="text" class="form-control" id="name" placeholder="Name">
+                <input type="hidden" id="hidden_value">
+            </div>
+            <div class="col-auto">
+                <label for="email" class="visually-hidden">Email</label>
+                <input type="email" class="form-control" id="email" placeholder="Email">
+            </div>
+            <div class="col-auto">
+                <label for="phone" class="visually-hidden">Phone</label>
+                <input type="text" class="form-control" id="mobile" placeholder="Phone">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary add-btn mt-4" style="display: block;">Add</button>
+                <button type="submit" class="btn btn-primary update-btn mt-4" style="display: none;">Update</button>
+            </div>
+        </form>
+
+        <!-- Table -->
+        <div>
+            <h2 class="mb-3">User Data</h2>
+            <table class="table table-bordered table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Phone Number</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="load_data"></tbody>
+            </table>
+            
+        </div>
+    </div>
+
+    <!-- Bootstrap JS (optional, for interactive components) -->
+    <script src="bootstrap-4.0.0-dist/js/bootstrap.js"></script>
+    <script src="jquery.js"></script>
+    <script>
+        $(document).ready(function(){
+            //Fetch All data
+            function loadData(){
+                let sno = 0;
+                $.ajax({
+                    url: 'http://localhost/api_crud/api/get_all_data.php',
+                    type: 'GET',
+                    success: function(data){
+                        $('#load_data').empty();
+                        if(data.status == false){
+                            $('#load_data').append('<tr><td class="col-5">'+ data.message +'</td></tr>');
+                        } else {
+                            $.each(data, function(key, value){
+                                $('#load_data').append("<tr>" 
+                                    + "<td>" + (sno += 1) + "</td>" +
+                                    "<td>" + value.name + "</td>" +
+                                    "<td>" + value.email + "</td>" +
+                                    "<td>" + value.mobile + "</td>" +
+                                    "<td> <button class='btn btn-primary mr-1 edit' data-eid='"+ value.id+"'>Edit</button>" +
+                                    "<button class='btn btn-danger delete' data-did='"+ value.id+"'>Delete</button></td>" +
+                                    "</tr>")
+                            })
+                        }
+                    }
+                });
+            }
+            loadData();
+            
+        // Fatch Single Data
+            $(document).on('click', '.edit', function(){
+                $('.add-btn').hide();
+                $('.update-btn').show();
+                let user_id = $(this).data('eid');
+                edit_id = user_id;
+                let obj = {'id' : user_id};
+                let jsonForm = JSON.stringify(obj);
+                
+                $.ajax({
+                    url: 'http://localhost/api_crud/api/get_single_data.php',
+                    type: 'POST',
+                    data: jsonForm,
+                    success: function(data){
+                        $('#hidden_value').val(data.id);
+                        $('#name').val(data.name);
+                        $('#email').val(data.email);
+                        $('#mobile').val(data.mobile);
+                    }
+                });
+            })
+
+            $(".update-btn").on('click', function(e) {
+                e.preventDefault();
+                
+                let id = $('#hidden_value').val();
+                let name = $('#name').val();
+                let email = $('#email').val();
+                let mobile = $('#mobile').val();
+
+                let obj = { id, name, email, mobile };
+                let data_obj = JSON.stringify(obj);
+
+                $.ajax({
+                    url: 'http://localhost/api_crud/api/update_data.php',
+                    type: 'POST',
+                    data: data_obj,
+                    contentType: 'application/json', // Ensure JSON is sent correctly
+                    success: function(data) {
+                        if (data.status == false) {
+                            $('.message').html("<h4 style='color:red'>" + data.message + "</h4>");
+                        } else {
+                            $('.update-btn').hide();
+                            $('.add-btn').show();
+
+                            // Clear form inputs
+                            $('#user_form').find('input, textarea, select').val('');
+                            $('.message').html("<h4 style='color:green'>" + data.message + "</h4>");
+                            // Reload the table
+                            loadData();
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error: ", error);
+                    }
+                });
+            });
+
+           
+            // Insert Data
+            $('.add-btn').on('click', function(e){
+                e.preventDefault();
+                let name = $('#name').val();
+                let email = $('#email').val();
+                let mobile = $('#mobile').val();
+                let obj = {name,email,mobile};
+                let obj_json = JSON.stringify(obj);
+                
+                
+                $.ajax({
+                    url: 'http://localhost/api_crud/api/insert_data.php',
+                    type: 'POST',
+                    data: obj_json,
+                    dataType: 'JSON',
+                    success: function(data){
+                        if(data.status == false){
+                            $('.message').html("<h4 style='color:red'>" + data.message + "</h4>");
+                            $('#user_form').find('input, textarea, select').val('');
+                            loadData();
+                        } else if(data.status == true) {
+                            $('#user_form').find('input, textarea, select').val('');
+                            $('.message').html("<h4 style='color:green'>" + data.message + "</h4>");
+                            loadData();
+                        }
+                    }
+                });
+            });
+            // Delete Data
+            $(document).on('click', '.delete', function(){
+                let id = $(this).data('did');
+                let obj = {id};
+                let jsonForm = JSON.stringify(obj);
+
+                $.ajax({
+                    url: 'http://localhost/api_crud/api/delete_data.php',
+                    type: 'POST',
+                    data: jsonForm,
+                    success: function(data){
+                        if(data.status == false){
+                            $('.message').html("<h4 style='color:red'>" + data.message + "</h4>");
+                        } else if(data.status == true){
+                            $('.message').html("<h4 style='color:green'>" + data.message + "</h4>");
+                            loadData();
+
+                        }
+                    }
+                });
+            });
+            
+        });
+       
+    </script>
+</body>
+</html>
